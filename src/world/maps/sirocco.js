@@ -42,6 +42,9 @@ export const INFO = {
     [41, 10],                 // inside the arcade
     [20, 6],                  // the block-B tunnel
     [-21, 18],                // the crossover cut
+    [-21, 3.5],               // the block-A tunnel
+    [20, 25.5],               // the second block-B tunnel
+    [-6, -26],                // inside the top-mid ruin
     [-13, -16, 2.2],          // the perch behind mid doors
     [-14, -25],               // top mid, in front of the terrace
     [40, -17],                // north yard between arcade and cistern
@@ -126,8 +129,15 @@ const SAND = 0xc8a578;
 function blockA(B) {
   // south chunk: z +20..+34, solid and tall — no one fights on top of it
   B.box('plaster', { x: -22, y: 0, z: 27, w: 28, h: 6, d: 14, seed: 30, scale: 3, tint: SAND });
-  // middle chunk: z -6..+16 — its top IS the roof position (h 4.2)
-  B.box('plaster', { x: -21, y: 0, z: 5, w: 26, h: 4.2, d: 22, seed: 31, scale: 3, tint: 0xc4a074 });
+  // middle chunk: z -6..+16 — its top IS the roof position (h 4.2).
+  // A 3 m tunnel pierces it at z +2..+5 (boulevard <-> mid) with a ceiling
+  // slab whose top sits flush at 4.2, so the roof stays one walkable surface.
+  B.box('plaster', { x: -21, y: 0, z: -2, w: 26, h: 4.2, d: 8, seed: 31, scale: 3, tint: 0xc4a074 });
+  B.box('plaster', { x: -21, y: 0, z: 10.5, w: 26, h: 4.2, d: 11, seed: 39, scale: 3, tint: 0xc4a074 });
+  // ceiling bottom at 3.0: the nav sampler needs ~3 m of headroom to place
+  // floor nodes under a slab — 2.6 left the tunnel a nodeless island
+  B.box('plaster', { x: -21, y: 3.0, z: 3.5, w: 26, h: 1.2, d: 3, seed: 35, scale: 3, tint: 0xc4a074 });
+  B.box('crate', { x: -27, y: 0, z: 4.4, w: 1.4, h: 1.4, d: 1.4, seed: 29, scale: 1.5 });  // tunnel cover
   // north chunk beside the stairwell: z -14..-6
   B.box('plaster', { x: -18, y: 0, z: -10, w: 20, h: 4.2, d: 8, seed: 32, scale: 3, tint: 0xc4a074 });
 
@@ -152,9 +162,13 @@ function blockA(B) {
   B.box('crate', { x: -21, y: 0, z: 18, w: 1.5, h: 1.5, d: 1.5, seed: 38, scale: 1.5 });
 }
 
-/** Block B fills mid-to-arcade, split by the covered tunnel at z +4..+8. */
+/** Block B fills mid-to-arcade, pierced by TWO covered tunnels (z +4..+8 and
+ *  z +24..+27) so the east half of the map is fought through, not around. */
 function blockB(B) {
-  B.box('plaster', { x: 20, y: 0, z: 21, w: 24, h: 4.2, d: 26, seed: 40, scale: 3, tint: SAND });
+  B.box('plaster', { x: 20, y: 0, z: 16, w: 24, h: 4.2, d: 16, seed: 40, scale: 3, tint: SAND });
+  B.box('plaster', { x: 20, y: 0, z: 30.5, w: 24, h: 4.2, d: 7, seed: 45, scale: 3, tint: SAND });
+  B.box('concrete', { x: 20, y: 3.0, z: 25.5, w: 24, h: 1.2, d: 3, seed: 46, scale: 3, tint: 0xa8895f, walkable: false });
+  B.box('crate', { x: 14, y: 0, z: 26.2, w: 1.4, h: 1.4, d: 1.4, seed: 47, scale: 1.5 });
   B.box('plaster', { x: 20, y: 0, z: -5, w: 24, h: 4.2, d: 18, seed: 41, scale: 3, tint: 0xc4a074 });
   // tunnel ceiling: a slab over the cut, low enough to feel like a tunnel
   B.box('concrete', { x: 20, y: 3.0, z: 6, w: 24, h: 0.5, d: 4.8, seed: 42, scale: 3, tint: 0xa8895f, walkable: false });
@@ -258,17 +272,36 @@ function laneDressing(B) {
   for (let i = -1; i <= 1; i++)
     B.box('sandbag', { x: -11 + i * 0.62, y: 2.2, z: -14.4, w: 0.66, h: 0.35, d: 0.42, seed: 89, scale: 0.8 });
 
-  // lane cover
-  car(B, 0, 14, 0.12, 0x8a4a3a);                       // mid, south of the gate
-  B.box('crate', { x: -37.5, y: 0, z: -2, w: 1.5, h: 1.5, d: 1.5, seed: 85, scale: 1.5 });  // boulevard north corner
-  // one rock in top mid — the ground in front of the terrace stays open on purpose
-  B.box('concrete', { x: -4, y: -0.4, z: -24, w: 2.6, h: 1.9, d: 2.2, yaw: -1.2, tint: 0x96604a, seed: 86, scale: 2 });
+  // mid chicane: two staggered half-walls turn the south tube into an S-weave.
+  // You clear each jag at reading distance instead of trading down 40 m of lane.
+  B.wall('plaster', -8, 20, -1, 20, 2.8, 0.5, [], { seed: 90, scale: 3, tint: SAND });
+  B.wall('plaster', 1, 27, 8, 27, 2.8, 0.5, [], { seed: 91, scale: 3, tint: SAND });
 
-  // spawn streets
+  // lane cover
+  car(B, 0, 8, 0.12, 0x8a4a3a);                        // mid, between chicane and gate
+  B.box('crate', { x: -37.5, y: 0, z: -2, w: 1.5, h: 1.5, d: 1.5, seed: 85, scale: 1.5 });  // boulevard north corner
+
+  // the top-mid ruin: an L of broken walls where the open ground used to be —
+  // the crossing in front of the terrace is now fought corner to corner
+  B.wall('plaster', -10, -30, -1, -30, 2.6, 0.5, [{ at: 3.2, w: 2.0, y0: 0, y1: 2.6 }], { seed: 93, scale: 3, tint: 0xbb9770 });
+  B.wall('plaster', -1, -30, -1, -21, 2.2, 0.5, [{ at: 3.4, w: 1.6, y0: 0.9, y1: 2.0 }], { seed: 94, scale: 3, tint: 0xbb9770 });
+  B.box('concrete', { x: -8, y: -0.4, z: -22.5, w: 2.6, h: 1.9, d: 2.2, yaw: -1.2, tint: 0x96604a, seed: 86, scale: 2 });
+  // and a jag in north mid so gate-to-spawn is not one straight tube
+  B.wall('plaster', 2, -24, 8, -24, 2.6, 0.5, [], { seed: 95, scale: 3, tint: SAND });
+
+  // spawn streets — solid masses, not just crates, so crossing them means
+  // weaving between buildings rather than sprinting a shooting range
   truck(B, 26, 42, 3.0);
   car(B, -26, 42, -0.2, 0x3f6a95);
+  B.box('plaster', { x: -14, y: 0, z: 40.5, w: 8, h: 4.5, d: 7, seed: 100, scale: 3, tint: SAND });
+  B.box('plaster', { x: 29, y: 0, z: 39, w: 10, h: 4.5, d: 6, seed: 101, scale: 3, tint: 0xc4a074 });
   crateStack(B, 44, 38, 3, 88);
+  B.wall('plaster', -34, 38, -28, 38, 2.4, 0.5, [], { seed: 97, scale: 3, tint: SAND });
+  B.box('plaster', { x: -24, y: 0, z: -43, w: 8, h: 4.5, d: 6, seed: 102, scale: 3, tint: SAND });
   crateStack(B, -47, -45, 3, 92);
+  crateStack(B, -6, -40, 2, 93);
+  B.wall('plaster', -38, -40, -32, -40, 2.4, 0.5, [], { seed: 99, scale: 3, tint: SAND });
+  B.wall('plaster', 14, -40, 19, -40, 2.4, 0.5, [], { seed: 103, scale: 3, tint: SAND });
   for (let i = 0; i < 4; i++)
     B.cyl('metal', { x: 14 + i * 1.1, y: 0, z: -47, r: 0.44, h: 1.1, seg: 10, tint: [0x9a3a2a, 0x7a6a2a][i % 2], seed: 96 + i });
 }
