@@ -33,13 +33,16 @@ export const INFO = {
   hotspots: [
     [0, -10],                 // mid doors
     [0, 20],                  // mid, south of the gate
-    [-43, 30], [-43, 12],     // the boulevard, south and at the arch
+    [-46, 30], [-43, 12],     // the boulevard, past the dogleg and at the arch
     [-43, -6],                // boulevard north, under the terrace steps
     [-35, -26, 1.8],          // TERRACE objective
+    [-47.5, -18, 3.0],        // the upper ledge over the terrace
     [30, -31],                // CISTERN objective (beside the tank)
+    [46.7, -36, 1.6],         // cistern defender platform
     [41, 10],                 // inside the arcade
     [20, 6],                  // the block-B tunnel
     [-21, 18],                // the crossover cut
+    [-13, -16, 2.2],          // the perch behind mid doors
     [-14, -25],               // top mid, in front of the terrace
     [40, -17],                // north yard between arcade and cistern
     [0, 42], [-15, -44],      // spawn streets
@@ -189,7 +192,14 @@ function arcade(B) {
 function terrace(B) {
   B.box('concrete', { x: -35, y: 0, z: -26, w: 30, h: 1.8, d: 24, seed: 60, scale: 3, tint: 0xbfa170 });
   // wide plaza steps: boulevard -> terrace (south edge, z -14)
-  B.stairs('concrete', -43, 0, -13.2, '-z', 5, 0.36, 0.5, 10);
+  B.stairs('concrete', -39.5, 0, -13.2, '-z', 5, 0.36, 0.5, 7);
+  // the upper ledge: a raised attacker's path off the boulevard. Climb at the
+  // end of long, walk the ledge at 3 m looking down on the whole terrace, and
+  // take the short steps down onto the objective — entering from height
+  // instead of through the same choke as everyone else.
+  B.stairs('concrete', -47.5, 0, -9.4, '-z', 9, 0.34, 0.55, 4);
+  B.box('concrete', { x: -47.5, y: 0, z: -18, w: 5, h: 3.0, d: 8, seed: 65, scale: 3, tint: 0xb5976a });
+  B.stairs('concrete', -47.5, 1.8, -25.2, '+z', 4, 0.3, 0.8, 4);
   // north steps: terrace -> north strip
   B.stairs('concrete', -35, 0, -40.8, '+z', 5, 0.36, 0.5, 8);
   // broken colonnade along the east lip — cover that faces top mid
@@ -212,25 +222,47 @@ function cistern(B) {
   ], W);
   // the tank itself — hard round cover dominating the middle
   B.cyl('brick', { x: 34, y: 0, z: -35, r: 2.6, h: 1.15, seg: 18, tint: 0xb08a60, seed: 72 });
-  crateStack(B, 42, -44, 5, 73);
-  crateStack(B, 24, -28, 2, 77);
+  // defender's platform along the back wall: holds both doors from height,
+  // but its stairs face the west door — take that door and you flank it
+  B.box('concrete', { x: 46.75, y: 0, z: -36, w: 5.5, h: 1.6, d: 12, seed: 74, scale: 3, tint: 0xb5976a });
+  B.stairs('wood', 46.75, 0, -45.4, '+z', 5, 0.32, 0.6, 4);
+  for (let i = -1; i <= 1; i++)
+    B.box('sandbag', { x: 44.3, y: 1.6, z: -36 + i * 0.62, w: 0.42, h: 0.35, d: 0.66, seed: 75, scale: 0.8 });
+  // cover is deliberately lopsided: the west half in front of the west door is
+  // an open kill zone, all the clutter crowds the south-east quarter
+  crateStack(B, 38, -46, 5, 73);
+  crateStack(B, 26, -47, 2, 77);
   for (let i = -2; i <= 2; i++)
     B.box('sandbag', { x: 28 + i * 0.62, y: 0, z: -24, w: 0.66, h: 0.35, d: 0.42, yaw: (i % 2) * 0.1, seed: 79, scale: 0.8 });
 }
 
 /** Street furniture: the arch on the boulevard, the mid gate, spawn clutter. */
 function laneDressing(B) {
+  // the dogleg: a building jut narrows the boulevard's south entry to a blind
+  // corner — you commit around it before the long sightline opens
+  B.box('plaster', { x: -39, y: 0, z: 29, w: 6, h: 6, d: 10, seed: 79, scale: 3, tint: SAND });
+  B.box('crate', { x: -44.5, y: 0, z: 25, w: 1.5, h: 1.5, d: 1.5, seed: 83, scale: 1.5 }); // corner cover
+
   // the boulevard arch — one doorway breaking the long sightline
   B.wall('plaster', -50, 8, -36, 8, 5, 0.8, [{ at: 5, w: 3.6, y0: 0, y1: 3.4 }], { seed: 80, scale: 3, tint: 0xc09a6e });
+  // cluttered pocket just past the arch: the push has somewhere to breathe
+  for (const ox of [0, 1.1])
+    B.cyl('metal', { x: -46 + ox, y: 0, z: 4, r: 0.44, h: 1.1, seg: 10, tint: ox ? 0x7a6a2a : 0x9a3a2a, seed: 81 });
+
   // mid gate: full-height wall with the one 2.6 m door
   B.wall('plaster', -8, -10, 8, -10, 4.2, 0.6, [{ at: 6.7, w: 2.6, y0: 0, y1: 2.8 }], { seed: 82, scale: 3, tint: 0xc09a6e });
+  // defender's perch behind the gate: watches the door from height, taken
+  // from the terrace side by its own stair
+  B.box('concrete', { x: -13, y: 0, z: -16, w: 6, h: 2.2, d: 4, seed: 87, scale: 3, tint: 0xb5976a });
+  B.stairs('wood', -19.6, 0, -16, '+x', 6, 0.37, 0.66, 3);
+  for (let i = -1; i <= 1; i++)
+    B.box('sandbag', { x: -11 + i * 0.62, y: 2.2, z: -14.4, w: 0.66, h: 0.35, d: 0.42, seed: 89, scale: 0.8 });
 
   // lane cover
   car(B, 0, 14, 0.12, 0x8a4a3a);                       // mid, south of the gate
-  B.box('crate', { x: -46, y: 0, z: 22, w: 1.5, h: 1.5, d: 1.5, seed: 84, scale: 1.5 });
   B.box('crate', { x: -37.5, y: 0, z: -2, w: 1.5, h: 1.5, d: 1.5, seed: 85, scale: 1.5 });  // boulevard north corner
-  for (const [x, z] of [[-4, -24], [-14, -33]])        // top mid rocks
-    B.box('concrete', { x, y: -0.4, z, w: 2.6, h: 1.9, d: 2.2, yaw: x * 0.3, tint: 0x96604a, seed: 86, scale: 2 });
+  // one rock in top mid — the ground in front of the terrace stays open on purpose
+  B.box('concrete', { x: -4, y: -0.4, z: -24, w: 2.6, h: 1.9, d: 2.2, yaw: -1.2, tint: 0x96604a, seed: 86, scale: 2 });
 
   // spawn streets
   truck(B, 26, 42, 3.0);
