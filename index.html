@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>OPERATION BLACKOUT — Tactical FPS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23090d12%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%279%27 fill=%27none%27 stroke=%27%23ffb545%27 stroke-width=%272%27/%3E%3Cpath d=%27M16 3v7M16 22v7M3 16h7M22 16h7%27 stroke=%27%23ffb545%27 stroke-width=%272%27/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="./style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./node_modules/three/build/three.module.js",
+    "three/addons/": "./node_modules/three/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <!--
+      Counter-Strike reticle: four square-capped bars with a hard 1px dark
+      outline underneath, so it stays readable against snow *and* against a
+      dark doorway. The outline is a second copy of the same geometry drawn
+      wider and behind — a drop-shadow blurs and vanishes at this line width.
+      #ch-out is kept in lockstep with #ch-lines by the HUD.
+    -->
+    <svg id="crosshair" viewBox="0 0 100 100">
+      <g id="ch-out" stroke="#000" stroke-width="2.6" stroke-linecap="butt" opacity="0.9">
+        <line x1="50" y1="46" x2="50" y2="42"/>
+        <line x1="50" y1="54" x2="50" y2="58"/>
+        <line x1="46" y1="50" x2="42" y2="50"/>
+        <line x1="54" y1="50" x2="58" y2="50"/>
+      </g>
+      <g id="ch-lines" stroke="#00e33b" stroke-width="1.1" stroke-linecap="butt">
+        <line class="ch-t" x1="50" y1="46" x2="50" y2="42"/>
+        <line class="ch-b" x1="50" y1="54" x2="50" y2="58"/>
+        <line class="ch-l" x1="46" y1="50" x2="42" y2="50"/>
+        <line class="ch-r" x1="54" y1="50" x2="58" y2="50"/>
+      </g>
+      <circle id="ch-dot" cx="50" cy="50" r="0.7" fill="#00e33b" opacity="0"/>
+    </svg>
+    <div id="hitmarker">
+      <svg viewBox="0 0 100 100" stroke-width="4" stroke-linecap="round">
+        <line x1="30" y1="30" x2="42" y2="42"/><line x1="70" y1="30" x2="58" y2="42"/>
+        <line x1="30" y1="70" x2="42" y2="58"/><line x1="70" y1="70" x2="58" y2="58"/>
+      </svg>
+    </div>
+
+    <div id="damage-vignette"></div>
+    <div id="hit-dirs"></div>
+    <div id="scope-overlay"><div class="scope-ring"></div><div class="scope-cross-h"></div><div class="scope-cross-v"></div></div>
+    <div id="pickup-prompt"></div>
+
+    <!-- top bar: score -->
+    <div id="topbar">
+      <div class="team team-blue"><span class="tname">GHOST</span><span id="score-blue">0</span></div>
+      <div id="timer">10:00</div>
+      <div class="team team-red"><span id="score-red">0</span><span class="tname">VIPER</span></div>
+    </div>
+
+    <!-- killfeed -->
+    <div id="killfeed"></div>
+
+    <!-- bottom left: health -->
+    <!--
+      Counter-Strike vitals: an icon and a big number side by side, health and
+      armour on one line. The old labelled meters cost three times the screen
+      area to say the same thing, and the number is what you actually read
+      mid-fight. The 2px bars are kept underneath as peripheral cues only.
+    -->
+    <div id="vitals">
+      <div class="vstat">
+        <svg class="vicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21C12 21 3 14.6 3 8.9 3 6.2 5.1 4 7.7 4c1.7 0 3.3.9 4.3 2.4C13 4.9 14.6 4 16.3 4 18.9 4 21 6.2 21 8.9c0 5.7-9 12.1-9 12.1z"/></svg>
+        <div class="vnums"><div id="health-num">100</div><div class="vbar"><div id="health-fill"></div></div></div>
+      </div>
+      <div class="vstat">
+        <svg class="vicon armor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5.2v6.1c0 5 3.4 9.3 8 10.7 4.6-1.4 8-5.7 8-10.7V5.2L12 2z"/></svg>
+        <div class="vnums"><div id="armor-num">100</div><div class="vbar armor"><div id="armor-fill"></div></div></div>
+      </div>
+    </div>
+
+    <!-- bottom right: ammo -->
+    <div id="ammo">
+      <div id="weapon-name">M4A1 CARBINE</div>
+      <div id="ammo-counts"><span id="ammo-mag">30</span><span id="ammo-sep">/</span><span id="ammo-reserve">120</span></div>
+      <div id="firemode">AUTO</div>
+      <div id="reload-hint" class="hidden">PRESS <b>R</b> TO RELOAD</div>
+      <div id="grenade-count">✚ 2</div>
+    </div>
+
+    <!-- weapon wheel / inventory -->
+    <div id="inventory"></div>
+
+    <!-- minimap -->
+    <div id="minimap-wrap"><canvas id="minimap" width="320" height="320"></canvas></div>
+
+    <div id="center-msg"></div>
+    <div id="respawn-msg" class="hidden">
+      <div class="rtitle">YOU WERE ELIMINATED</div>
+      <div class="rkiller" id="killer-name"></div>
+      <div class="rtimer">RESPAWNING IN <span id="respawn-sec">3</span></div>
+    </div>
+
+    <div id="hint-bar"></div>
+  </div>
+
+  <!-- ============ SCOREBOARD ============ -->
+  <div id="scoreboard" class="hidden">
+    <div class="sb-panel">
+      <div class="sb-head"><span>TEAM DEATHMATCH</span><span id="sb-target">SCORE LIMIT 120</span></div>
+      <div class="sb-team">
+        <div class="sb-team-head blue"><span>GHOST SQUAD</span><span id="sb-blue-score">0</span></div>
+        <table><thead><tr><th>OPERATOR</th><th>K</th><th>D</th><th>ACC</th><th>PING</th></tr></thead><tbody id="sb-blue"></tbody></table>
+      </div>
+      <div class="sb-team">
+        <div class="sb-team-head red"><span>VIPER CELL</span><span id="sb-red-score">0</span></div>
+        <table><thead><tr><th>OPERATOR</th><th>K</th><th>D</th><th>ACC</th><th>PING</th></tr></thead><tbody id="sb-red"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MENU ============ -->
+  <div id="menu">
+    <div class="menu-bg"></div>
+    <div class="menu-inner">
+      <h1 class="logo">OPERATION <span>BLACKOUT</span></h1>
+      <div class="subtitle">TACTICAL FIRST-PERSON COMBAT — DISTRICT 7</div>
+
+      <div class="menu-cols">
+        <div class="menu-card">
+          <h3>BOT DIFFICULTY</h3>
+          <div class="seg" id="sel-difficulty">
+            <button data-v="0">RECRUIT</button>
+            <button data-v="1">REGULAR</button>
+            <button class="on" data-v="2">HARDENED</button>
+            <button data-v="3">VETERAN</button>
+            <button data-v="4">ELITE</button>
+          </div>
+          <div class="diff-desc" id="diff-desc"></div>
+        </div>
+
+        <div class="menu-card">
+          <h3>MAP</h3>
+          <div class="seg" id="sel-map">
+            <button class="on" data-v="district7">DISTRICT 7</button>
+            <button data-v="foundry">FOUNDRY</button>
+            <button data-v="coldharbor">COLD HARBOR</button>
+            <button data-v="mesa">RED MESA</button>
+            <button data-v="greenfall">GREENFALL</button>
+            <button data-v="caldera">CALDERA</button>
+          </div>
+          <div class="diff-desc" id="map-desc"></div>
+        </div>
+
+        <div class="menu-card">
+          <h3>MATCH SETUP</h3>
+          <div class="opt-row"><label>ENEMY BOTS</label>
+            <div class="seg small" id="sel-enemies"><button data-v="3">3</button><button class="on" data-v="5">5</button><button data-v="7">7</button><button data-v="9">9</button></div>
+          </div>
+          <div class="opt-row"><label>ALLIED BOTS</label>
+            <div class="seg small" id="sel-allies"><button data-v="0">0</button><button data-v="2">2</button><button class="on" data-v="4">4</button><button data-v="6">6</button></div>
+          </div>
+          <div class="opt-row"><label>SCORE LIMIT</label>
+            <div class="seg small" id="sel-scorelimit"><button data-v="40">40</button><button data-v="75">75</button><button class="on" data-v="120">120</button><button data-v="200">200</button></div>
+          </div>
+          <div class="opt-row"><label>RULESET</label>
+            <div class="seg small" id="sel-csrules"><button class="on" data-v="1">TACTICAL</button><button data-v="0">ARCADE</button></div>
+          </div>
+          <div class="diff-desc" id="rules-desc"></div>
+        </div>
+
+        <div class="menu-card">
+          <h3>LOADOUT</h3>
+          <div class="opt-row"><label>PRIMARY</label>
+            <div class="seg small wrap" id="sel-primary"></div>
+          </div>
+          <div class="opt-row"><label>SECONDARY</label>
+            <div class="seg small wrap" id="sel-secondary"></div>
+          </div>
+          <div id="gun-stats"></div>
+        </div>
+
+        <div class="menu-card">
+          <h3>VIDEO</h3>
+          <div class="opt-row"><label>QUALITY</label>
+            <div class="seg small" id="sel-quality"><button data-v="0">LOW</button><button data-v="1">MED</button><button class="on" data-v="2">HIGH</button><button data-v="3">ULTRA</button></div>
+          </div>
+          <div class="opt-row"><label>FOV</label>
+            <div class="slider-row"><input type="range" id="sel-fov" min="70" max="110" step="1" value="90"><span id="fov-val">90</span></div>
+          </div>
+          <div class="opt-row"><label>SENSITIVITY</label>
+            <div class="slider-row"><input type="range" id="sel-sens" min="20" max="300" step="5" value="100"><span id="sens-val">1.00</span></div>
+          </div>
+          <div class="opt-row"><label>INVERT Y</label>
+            <div class="seg small" id="sel-invert"><button class="on" data-v="0">OFF</button><button data-v="1">ON</button></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-play">DEPLOY</button>
+      <div class="menu-foot">Click DEPLOY, then move your mouse to look around. Press ESC any time to return here.</div>
+    </div>
+  </div>
+
+  <!-- ============ PAUSE ============ -->
+  <div id="pause" class="hidden">
+    <div class="pause-inner">
+      <h2>PAUSED</h2>
+      <button id="btn-resume">RESUME</button>
+      <button id="btn-restart">RESTART MATCH</button>
+      <button id="btn-quit">ABANDON MATCH</button>
+      <div class="pause-note">Sensitivity <input type="range" id="pause-sens" min="20" max="300" step="5"><span id="pause-sens-val"></span></div>
+    </div>
+  </div>
+
+  <!-- ============ END SCREEN ============ -->
+  <div id="endscreen" class="hidden">
+    <div class="end-inner">
+      <h2 id="end-title">VICTORY</h2>
+      <div id="end-sub"></div>
+      <div id="end-stats"></div>
+      <button id="btn-again">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <div id="loading"><div class="load-inner"><div class="spinner"></div><div id="load-text">LOADING DISTRICT 7…</div></div></div>
+  <div id="fps-counter"></div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

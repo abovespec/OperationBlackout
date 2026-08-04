@@ -1,0 +1,21 @@
+{
+  "name": "operation-blackout",
+  "version": "1.0.0",
+  "description": "Browser tactical FPS with navmesh-driven bots \u2014 procedural geometry, textures and audio",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "shots": "node tools/shot.mjs",
+    "playtest": "node tools/playtest.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  },
+  "private": true,
+  "type": "module"
+}
