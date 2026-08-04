@@ -57,6 +57,7 @@ function renderMapDesc() {
       mesa: 'Desert dunes under a noon sun. A dry riverbed snakes across the middle — sunken and hidden — while two flat-topped mesas overlook it and an adobe village holds the centre.',
       greenfall: 'A green highland valley on a wet morning. A shallow river splits the map; wade it anywhere or take the contested bridge. Farm to the north, ruin to the south, walled lanes between.',
       caldera: 'A live volcanic crater under an ash sky. Climb to the rim ring, cross at one of two saddles, and fight through basalt columns and lava-light for the drill rig on the crater floor.',
+      sirocco: 'A desert town in the classic three-lane mould. A long open boulevard west, a gate-door sightline down mid, a covered market arcade east — feeding a raised terrace and a walled cistern yard.',
     }[m.id] || 'A wide urban block: open plaza, long approaches, rooftops and a water tower overlooking the whole map.');
 }
 

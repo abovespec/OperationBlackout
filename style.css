@@ -161,7 +161,10 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .menu-card{background:rgba(10,15,21,.72);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:15px 16px;
   backdrop-filter:blur(8px)}
 .menu-card h3{font-size:11px;letter-spacing:.26em;opacity:.5;font-weight:600;margin-bottom:12px}
-.seg{display:flex;gap:4px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+/* the map list outgrew a single flex row: even 3-column grid, no truncation */
+#sel-map{display:grid;grid-template-columns:repeat(3,1fr)}
+#sel-map button{white-space:nowrap;padding:8px 2px;font-size:10.5px}
 .seg.wrap{flex-wrap:wrap}
 .seg button{flex:1;min-width:44px;padding:8px 6px;font:inherit;font-size:11px;letter-spacing:.1em;cursor:pointer;
   background:rgba(255,255,255,.045);color:#cdd8d4;border:1px solid rgba(255,255,255,.09);border-radius:2px;

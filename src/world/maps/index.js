@@ -6,6 +6,7 @@ import * as coldharbor from './coldharbor.js';
 import * as mesa from './mesa.js';
 import * as greenfall from './greenfall.js';
 import * as caldera from './caldera.js';
+import * as sirocco from './sirocco.js';
 
 export const MAPS = {
   district7: {
@@ -49,6 +50,13 @@ export const MAPS = {
     tagline: 'VOLCANIC CRATER · FIGHT FOR THE RIM',
     info: caldera.INFO,
     build: caldera.build,
+  },
+  sirocco: {
+    id: 'sirocco',
+    name: 'SIROCCO',
+    tagline: 'DESERT TOWN · THREE LANES, TWO PLAZAS',
+    info: sirocco.INFO,
+    build: sirocco.build,
   },
 };
 
